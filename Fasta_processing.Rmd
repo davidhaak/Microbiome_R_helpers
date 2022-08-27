@@ -1,0 +1,55 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+# We only need base R and Tidyverse
+```{r}
+library(tidyverse)
+```
+
+# Reading in Fasta formated files
+```{r}
+#reading in fasta seqs file (as output by phyloseq). These are standard fasta with ID on on one line and sequence on the second line.
+
+tsect <- read.delim("/Volumes/GoogleDrive/My Drive/Projects/Ariel_project/Ariel_current_working_documents/Chapter_3/R stuff/transect_air_asv_seqs.fasta", sep = c("\n"), header = FALSE)
+
+#uncomment to view the imported table
+#view(tsect)
+
+jg <- read.delim("/Volumes/GoogleDrive/Shared drives/2020_Global_Weed/2020_Global_change_project/Analysis/jgmbiome_asv_seqs.fasta", sep = c("\n"), header = FALSE)
+#view(jg)
+```
+
+# A function to process these imported fasta files 
+```{r}
+#Function to process files that were output as ASV ID \t Fasta sequence so that we have columns named ASVID and fasta_seq then we can join by fasta_seq but retain the original ASVID flags for tracking.
+
+format_seqs <- function(x){
+  table.x = x %>% 
+    group_by(grp = str_c('Column', rep(1:2, length.out = n()))) %>% 
+    mutate(rn = row_number()) %>% 
+    ungroup %>% 
+    pivot_wider(names_from = grp, values_from = V1) %>% 
+    select(-rn) %>% 
+    rename(ASVID = Column1,
+           fasta_seq = Column2) %>% 
+    separate(ASVID, into = c("a", "b"), sep = ">") %>%
+    select(-a) %>% 
+    rename(ASVID = b)
+}
+
+```
+
+# Now we can make our tables and use inner join to identify shared ASVs
+```{r}
+tsect_table<-format_seqs(tsect)
+
+jg_table<-format_seqs(jg)
+
+join_table<-tsect_table %>% 
+  inner_join(jg_table, by = "fasta_seq")
+```
+
+
